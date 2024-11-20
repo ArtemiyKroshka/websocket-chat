@@ -1,0 +1,47 @@
+@import "./base.css";
+
+#app {
+  margin: 0 auto;
+  padding: 2rem;
+  font-weight: normal;
+  height: -webkit-fill-available;
+}
+
+header {
+  display: flex;
+  justify-content: center;
+  text-transform: uppercase;
+  margin-bottom: 6rem;
+  font-weight: bolder;
+  font-size: xx-large;
+}
+
+main {
+  display: flex;
+  justify-content: center;
+}
+
+label {
+  color: rgb(0, 220, 130);
+  font-weight: 500;
+  font-size: 1.5rem;
+}
+
+button {
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  background-color: var(--vt-c-black-soft);
+  color: var(--color-text);
+  height: 35px;
+}
+
+input {
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  background-color: var(--vt-c-black-soft);
+  color: var(--color-text);
+  height: 35px;
+  text-align: center;
+}
