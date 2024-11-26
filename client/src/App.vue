@@ -19,11 +19,11 @@
 import {ref, onBeforeUnmount} from "vue";
 import SignIn from "./components/SignIn.vue";
 import Chat from "./components/Chat.vue";
-import type Message from "./types/chat.ts";
+import type {MessageWrapper} from "@/types/chat";
 
 const name = ref<string>("User");
 const id = ref<string>("");
-const messages = ref<Message[]>([]);
+const messages = ref<MessageWrapper[]>([]);
 const isConnected = ref(false);
 const newMessage = ref("");
 const socket = ref<WebSocket | null>(null);
@@ -53,6 +53,9 @@ const connect = () => {
       if (parsedData.senderId == "server") {
         id.value = parsedData.content;
         return;
+      }
+      if (typeof parsedData.content === "string") {
+        parsedData.content = JSON.parse(parsedData.content);
       }
       messages.value.push(parsedData);
     } catch (error) {

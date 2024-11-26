@@ -8,10 +8,10 @@
         :key="idx"
       >
         <span class="name">
-          {{ formatData(el.content).name }}
+          {{ el.content.name }}
         </span>
         <span class="message">
-          {{ formatData(el.content).message }}
+          {{ el.content.message }}
         </span>
       </div>
     </div>
@@ -23,35 +23,23 @@
 </template>
 <script lang="ts" setup>
 import {ref, watch, defineProps, defineEmits} from "vue";
+import type {MessageWrapper} from "@/types/chat";
 
-const props = defineProps({
-  modelValue: {
-    type: String,
-    required: true,
-  },
-  messages: {
-    type: Array,
-    default: [],
-  },
-  id: {
-    type: String,
-    required: true,
-  },
-});
+type Props = {
+  modelValue: string;
+  messages: MessageWrapper[];
+  id: string;
+};
+
+const props = defineProps<Props>();
 
 const emit = defineEmits(["update:modelValue", "sendMessage"]);
 
-const message = ref<string>(props.message);
+const message = ref<string>(props.modelValue);
 
 watch(message, (newValue) => {
   emit("update:modelValue", newValue);
 });
-
-const formatData = (data: string) => {
-  const parsedData = JSON.parse(data);
-
-  return parsedData;
-};
 
 watch(
   () => props.modelValue,

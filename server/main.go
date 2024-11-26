@@ -15,9 +15,9 @@ type IClient interface {
 }
 
 type Client struct {
-	ID   string
-	conn *websocket.Conn
-	mu   sync.Mutex
+	ID       string
+	conn     *websocket.Conn
+	messages chan Message
 }
 
 type Message struct {
@@ -26,7 +26,7 @@ type Message struct {
 }
 
 var (
-	clients  = make([]*Client, 0)
+	clients  = make(map[string]*Client)
 	clientMu sync.Mutex
 	address  = "localhost:8080"
 	upgrader = websocket.Upgrader{
@@ -38,19 +38,18 @@ var (
 	}
 )
 
-func (c *Client) send(message Message) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	data, err := json.Marshal(message)
-	if err != nil {
-		fmt.Printf("Error marshalling message: %v\n", err)
-		return
-	}
-
-	err = c.conn.WriteMessage(websocket.TextMessage, data)
-	if err != nil {
-		fmt.Printf("Error writing message to client %s: %v\n", c.ID, err)
+func (c *Client) send() {
+	for msg := range c.messages {
+		data, err := json.Marshal(msg)
+		if err != nil {
+			fmt.Printf("Error marshalling message: %v\n", err)
+			continue
+		}
+		err = c.conn.WriteMessage(websocket.TextMessage, data)
+		if err != nil {
+			fmt.Printf("Error writing message to client %s: %v\n", c.ID, err)
+			return
+		}
 	}
 }
 
@@ -58,10 +57,10 @@ func removeClient(clientID string) {
 	clientMu.Lock()
 	defer clientMu.Unlock()
 
-	for idx, el := range clients {
-		if el.ID == clientID {
-			clients = append(clients[:idx], clients[:idx+1]...)
-		}
+	if client, exists := clients[clientID]; exists {
+		close(client.messages)
+		client.conn.Close()
+		delete(clients, clientID)
 	}
 }
 
@@ -71,22 +70,24 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Error upgrading to WebSocket: %v\n", err)
 		return
 	}
-	defer conn.Close()
 
 	clientID := uuid.NewString()
 	client := &Client{
-		ID:   clientID,
-		conn: conn,
+		ID:       clientID,
+		conn:     conn,
+		messages: make(chan Message, 100),
 	}
 
 	clientMu.Lock()
-	clients = append(clients, client)
+	clients[clientID] = client
 	clientMu.Unlock()
 
-	client.send(Message{
+	go client.send()
+
+	client.messages <- Message{
 		SenderID: "server",
 		Content:  clientID,
-	})
+	}
 
 	fmt.Printf("Client connected: %s\n", clientID)
 
@@ -102,17 +103,21 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func broadcast(clientId, messageData string) {
-	clientMu.Lock()
-	defer clientMu.Unlock()
+func broadcast(clientID, messageData string) {
 	message := Message{
-		SenderID: clientId,
+		SenderID: clientID,
 		Content:  messageData,
 	}
 
+	clientMu.Lock()
 	for _, client := range clients {
-		client.send(message)
+		select {
+		case client.messages <- message:
+		default:
+			fmt.Printf("Client %s is slow, dropping message\n", client.ID)
+		}
 	}
+	clientMu.Unlock()
 }
 
 func main() {
