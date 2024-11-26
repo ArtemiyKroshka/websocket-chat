@@ -15,10 +15,10 @@
         </span>
       </div>
     </div>
-    <div class="chat-input">
+    <form @submit.prevent="emit('sendMessage')" class="chat-input">
       <input type="text" v-model="message" />
-      <button @click="emit('sendMessage')">Send</button>
-    </div>
+      <button type="submit">Send</button>
+    </form>
   </div>
 </template>
 <script lang="ts" setup>
